@@ -1,0 +1,205 @@
+	<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>SCALLECT</title>
+
+    <!-- CSS -->
+    <style type="text/css">
+      /*画面を動的に変化*/
+      .wrapper{
+      width: 100%;
+      height: 100%;
+      }
+
+      /* キャンバス領域を表示 */
+      canvas { border: 1px solid black; }
+    </style>
+
+  </head>
+  <body>
+    <div class= "wrapper">
+      <canvas id="canvas" width="1000" height="600">
+        赤い四角形を表示
+      </canvas>
+    </div>
+
+    <script>
+        var objWidth = 50, objHeight = 50; //図形の縦横を指定
+
+         //prototypeを設定
+
+        //四角のコンストラクタを設定
+        
+        function $Rect($ctx, x, y,color) {
+            this.$ctx = $ctx; //Canvasのコンテキスト
+            this.x = x || 0; //四角の横位置(X)
+            this.y = y || 0; //四角の縦位置(Y)
+            // this.w = w || 0; //四角の幅
+            // this.h = h || 0; //四角の高さ
+            this.color = color || "rgb(0, 0, 0)"; //円の色
+        }
+        
+
+        //円のコンストラクタを設定
+        /*
+        function $Rect($ctx, x, y, r, color) {
+            this.$ctx = $ctx; //Canvasのコンテキスト
+            this.x = x || 0; //円の横位置(X)
+            this.y = y || 0; //円の縦位置(Y)
+            this.r = r || 0; //円の半径
+            this.color = color || "rgb(0, 0, 0)"; //円の色
+        }
+        */
+
+        //四角のメソッドをprototypeで設定
+        $Rect.prototype = {
+            //四角の描画
+            draw: function() {
+                $ctx.fillStyle = this.color;
+                $ctx.fillRect(this.x, this.y, objWidth, objHeight);            
+                //円の描画
+                /*
+                $ctx = this.$ctx;
+                $ctx.beginPath();
+                $ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                $ctx.fillStyle = this.color;
+                $ctx.fill();
+                $ctx.closePath();
+                */
+            },
+            //当たり判定
+            isTouched: function(cx, cy) {
+                //四角の当たり判定
+                return(this.x < cx && (this.x + objWidth) > cx && this.y < cy && (this.y + objHeight) > cy)
+
+                //円の当たり判定
+                /*
+                return ((this.x - cx) * (this.x - cx) + (this.y - cy) * (this.y - cy) <= this.r * this.r);
+                */
+            }
+        }
+
+        //初期設定
+        var $canvasElm = document.getElementById("canvas"), //Canvasの要素を取得
+            $ctx = $canvasElm.getContext("2d"), //Canvasのcontextを取得
+            $Rects = [], //円のインスタンスを入れておく配列を初期化
+            rectId = 0; //円のインスタンスのIDを初期化
+         
+        /*-- マウス操作 --*/
+        //タッチデバイスとマウスデバイスのイベント振り分け(今回はPCのみだからいらない)
+        /*
+        var EVENT = {};
+        if ('ontouchstart' in window) {
+            EVENT.TOUCH_START = 'touchstart';
+            EVENT.TOUCH_MOVE = 'touchmove';
+            EVENT.TOUCH_END = 'touchend';
+        } else {
+            EVENT.TOUCH_START = 'mousedown';
+            EVENT.TOUCH_MOVE = 'mousemove';
+            EVENT.TOUCH_END = 'mouseup';
+        }
+         */
+
+        //クリック時 or ドラッグ開始時の動作
+        $canvasElm.addEventListener('mousedown', function(e){
+            e.preventDefault ? e.preventDefault() : e.returnValue = false; //デフォルトのイベント効果を無効化
+            var scale = $canvasElm.width / $canvasElm.clientWidth, //レスポンシブでのCanvasの縮小率を取得
+                cx = e.pageX ? (e.pageX - $canvasElm.offsetLeft) * scale : (e.changedTouches[0].pageX - $canvasElm.offsetLeft) * scale, //Canvas上のマウスの横位置(X)を取得
+                cy = e.pageY ? (e.pageY - $canvasElm.offsetTop) * scale : (e.changedTouches[0].pageY - $canvasElm.offsetTop) * scale, //Canvas上のマウスの縦位置(Y)を取得
+                isRectTouched = false; //四角がタッチされたときのフラグの初期化
+            // $ctx.clearRect(0, 0, $canvasElm.width, $canvasElm.height); //Canvasをクリアする
+            for(var i = 0; i < $Rects.length; i++) { //描画済みの四角についてそれぞれ処理
+                if($Rects[i].isTouched(cx, cy)) { //円がタッチされている場合
+                    $canvasElm.data = {
+                        prevX: $Rects[i].x, //移動前の四角の横位置
+                        prevY: $Rects[i].y, //移動前の四角の縦位置
+                        prevCX: cx, //移動前のマウスの横位置
+                        prevCY: cy, //移動前のマウスの縦位置
+                        touchedId: i //移動対象の円のインスタンスID
+                    }
+                    isRectTouched = true; //円がタッチされていたらフラグをtureに
+                }
+            }
+            //4行上の部分とうまく統合できないか？
+            if(isRectTouched) { //一つでも円がタッチされていたら、移動を有効にする
+                $canvasElm.data.down = true;
+            } 
+         
+            //円のインスタンスをそれぞれ描画
+            /*
+            for(var i = 0; i < $Rects.length; i++) {
+                $Rects[i].draw();
+            }
+            */
+        });
+
+        //ドラッグ中の操作
+        $canvasElm.addEventListener('mousemove', function(e){
+            e.preventDefault ? e.preventDefault() : e.returnValue = false;//デフォルトのイベント効果を無効化
+            var scale = $canvasElm.width / $canvasElm.clientWidth,//レスポンシブでのCanvasの縮小率を取得
+                cx = e.pageX ? (e.pageX - $canvasElm.offsetLeft) * scale : (e.changedTouches[0].pageX - $canvasElm.offsetLeft) * scale,//Canvas上のマウスの横位置(X)を取得
+                cy = e.pageY ? (e.pageY - $canvasElm.offsetTop) * scale : (e.changedTouches[0].pageY - $canvasElm.offsetTop) * scale;//Canvas上のマウスの縦位置(Y)を取得
+         
+            if($canvasElm.data) {
+                if($canvasElm.data.down) { //移動が有効になっていたら
+                    $ctx.clearRect(0, 0, $canvasElm.width, $canvasElm.height); //Canvasをクリア
+                    $Rects[$canvasElm.data.touchedId].x = $canvasElm.data.prevX + (cx - $canvasElm.data.prevCX); //円をドラッグした分だけ移動(X)
+                    $Rects[$canvasElm.data.touchedId].y = $canvasElm.data.prevY + (cy - $canvasElm.data.prevCY); //円をドラッグした分だけ移動(Y)
+                }
+            }
+         
+            for(var i = 0; i < $Rects.length; i++) {
+                $Rects[i].draw();
+            }
+        });
+        //ドラッグ終了時の操作
+        $canvasElm.addEventListener('mouseup', function(e){
+            e.preventDefault ? e.preventDefault() : e.returnValue = false;
+            if($canvasElm.data) {
+                if($canvasElm.data.down) { //移動が有効になっていたら
+                    var scale = $canvasElm.width / $canvasElm.clientWidth,
+                        cx = e.pageX ? (e.pageX - $canvasElm.offsetLeft) * scale : (e.changedTouches[0].pageX - $canvasElm.offsetLeft) * scale,
+                        cy = e.pageY ? (e.pageY - $canvasElm.offsetTop) * scale : (e.changedTouches[0].pageY - $canvasElm.offsetTop) * scale;
+         
+         
+                    $ctx.clearRect(0, 0, $canvasElm.width, $canvasElm.height);
+                    $Rects[$canvasElm.data.touchedId].x = $canvasElm.data.prevX + (cx - $canvasElm.data.prevCX);
+                    $Rects[$canvasElm.data.touchedId].y = $canvasElm.data.prevY + (cy - $canvasElm.data.prevCY);
+         
+                    for(var i = 0; i < $Rects.length; i++) {
+                        $Rects[i].draw();
+                    }
+         
+                    $canvasElm.data = null; //移動を無効に
+                }
+            }
+        });
+
+        //ダブルクリック時の動作
+        $canvasElm.addEventListener('dblclick', function(e){
+            e.preventDefault ? e.preventDefault() : e.returnValue = false;
+            var scale = $canvasElm.width / $canvasElm.clientWidth,
+                cx = e.pageX ? (e.pageX - $canvasElm.offsetLeft) * scale : (e.changedTouches[0].pageX - $canvasElm.offsetLeft) * scale,
+                cy = e.pageY ? (e.pageY - $canvasElm.offsetTop) * scale : (e.changedTouches[0].pageY - $canvasElm.offsetTop) * scale;
+
+            $ctx.clearRect(0, 0, $canvasElm.width, $canvasElm.height); 
+            //四角のインスタンスを追加
+            $Rects[rectId] = new $Rect($ctx, cx, cy, "#fcc");
+            //円のインスタンスを追加
+            /*
+            $Rects[rectId] = new $Rect($ctx, cx, cy, Math.random() * (30 - 10) + 10, "rgb(" +  Math.round(Math.random() * (191 - 146) + 146) + ", " +  Math.round(Math.random() * (219 - 204) + 204) + ", " +  Math.round(Math.random() * (239 - 140) + 140) + ")"); //インスタンスを追加(半径と色をランダムに設定)
+             */
+
+            rectId++; //四角のインスタンスIDを更新
+            
+            for(var i = 0; i < $Rects.length; i++) {
+                $Rects[i].draw();
+            }
+
+        });
+
+    </script>
+
+  </body>
+</html>
